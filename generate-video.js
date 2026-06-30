@@ -1,7 +1,6 @@
-// api/generate-video.js
 export default async function handler(req, res) {
-    // CORS Başlıkları
-    res.setHeader('Access-Control-Allow-Credentials', true);
+    // 1. CORS Başlıklarını en başta ve eksiksiz tanımlıyoruz
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
@@ -9,28 +8,34 @@ export default async function handler(req, res) {
         'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
     );
 
-    // OPTIONS kontrolü (Tarayıcı ön kontrolü)
+    // 2. Tarayıcının ön kontrol (OPTIONS) isteğini ANINDA 200 OK ile bitiriyoruz
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
+    // 3. Sadece POST isteklerini kabul et
     if (req.method !== "POST") {
         return res.status(405).json({ error: "Method not allowed" });
     }
 
     try {
-        // Body verisini güvenli bir şekilde alalım
+        // Gelen veriyi güvenli oku
         let bodyData = req.body;
-        if (typeof bodyData === 'string') {
-            bodyData = JSON.parse(bodyData);
+        if (typeof bodyData === 'string' && bodyData.trim() !== '') {
+            try {
+                bodyData = JSON.parse(bodyData);
+            } catch (e) {
+                // JSON parse hatası olursa devam etsin
+            }
         }
 
-        const { script, duration = 10 } = bodyData;
+        const { script } = bodyData || {};
         
-        if (!script || script.length === 0) {
+        if (!script) {
             return res.status(400).json({ error: "Script is required" });
         }
         
+        // Runway API'ye istek at
         const response = await fetch("https://api.runwayml.com/v1/videos", {
             method: "POST",
             headers: {
@@ -39,13 +44,14 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
                 promptText: script,
-                duration,
+                duration: 10,
                 ratio: "16:9",
                 model: "gen3a_turbo",
             }),
         });
         
         const data = await response.json();
+        
         if (!response.ok) {
             return res.status(response.status).json({
                 error: data?.error || "Runway API error",
