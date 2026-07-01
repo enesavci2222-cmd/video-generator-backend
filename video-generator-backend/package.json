@@ -1,0 +1,6 @@
+{
+  "name": "video-generator-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module"
+}
